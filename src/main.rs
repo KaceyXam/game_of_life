@@ -2,15 +2,14 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::window::{PresentMode, WindowResolution};
-use rand::Rng;
 
-const GRID_WIDTH: usize = 30;
-const GRID_HEIGHT: usize = 20;
-const CELL_SIZE: f32 = 10.0;
+const GRID_WIDTH: usize = 128;
+const GRID_HEIGHT: usize = 96;
+const CELL_SIZE: f32 = 5.0;
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::MIDNIGHT_BLUE))
+        .insert_resource(ClearColor(Color::BLACK))
         .init_resource::<GameData>()
         .insert_resource(SimulationTick {
             timer: Timer::new(Duration::from_millis(50), TimerMode::Repeating),
@@ -23,6 +22,7 @@ fn main() {
                     (GRID_HEIGHT as f32) * CELL_SIZE,
                 ),
                 present_mode: PresentMode::AutoVsync,
+                resizable: false,
                 ..Default::default()
             }),
             ..Default::default()
@@ -47,15 +47,9 @@ struct GameData {
 
 impl Default for GameData {
     fn default() -> Self {
-        let mut board = [[Cell { alive: false }; GRID_WIDTH]; GRID_HEIGHT];
-        for x in 0..GRID_WIDTH {
-            for y in 0..GRID_HEIGHT {
-                if rand::thread_rng().gen_bool(0.999) {
-                    board[y][x].alive = true;
-                }
-            }
+        GameData {
+            board: [[Cell { alive: false }; GRID_WIDTH]; GRID_HEIGHT],
         }
-        GameData { board }
     }
 }
 
@@ -113,8 +107,8 @@ fn render_board(
                         },
                         transform: Transform {
                             translation: Vec3::from([
-                                x as f32 * CELL_SIZE,
-                                y as f32 * CELL_SIZE,
+                                (x as f32 * CELL_SIZE) + CELL_SIZE / 2.0,
+                                (y as f32 * CELL_SIZE) + CELL_SIZE / 2.0,
                                 0.0,
                             ]),
                             ..Default::default()
@@ -192,8 +186,16 @@ fn add_cells(
     if mouse.pressed(MouseButton::Left) {
         let main_window = windows.get_single().unwrap();
         if let Some(position) = main_window.cursor_position() {
-            let x = (position.x / CELL_SIZE) as usize;
-            let y = (position.y / CELL_SIZE) as usize;
+            let x = if position.x >= (GRID_WIDTH as f32 * CELL_SIZE) {
+                GRID_WIDTH - 1
+            } else {
+                (position.x / CELL_SIZE) as usize
+            };
+            let y = if position.y > (GRID_HEIGHT as f32 * CELL_SIZE) {
+                GRID_HEIGHT
+            } else {
+                (position.y / CELL_SIZE) as usize
+            };
             game_data.board[y][x].alive = true;
         }
     }
